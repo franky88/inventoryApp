@@ -1,28 +1,15 @@
 import os
 import secrets
+from PIL import Image
 from flask import render_template, flash, url_for, redirect, request
-from inventory.forms import RegistrationForm, LoginForm, UpdateAccountForm
+from inventory.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm
 from inventory.models import User, Post
 from inventory import app, bcrypt, db
 from flask_login import login_user, current_user, logout_user, login_required
 
-posts = [
-    {
-        "author": "Franky",
-        "title": "Sample title",
-        "date_posted": "March 27, 2019",
-        "content": "sample content for sample post",
-    },
-    {
-        "author": "James",
-        "title": "Sample james",
-        "date_posted": "March 27, 2019",
-        "content": "sample content for james post",
-    }
-]
-
 @app.route("/")
 def home():
+    posts = Post.query.all()
     return render_template("inventory/inventory_list.html", posts=posts)
 
 @app.route("/register", methods=["GET", "POST"])
@@ -67,7 +54,12 @@ def save_picture(form_picture):
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
     picture_path = os.path.join(app.root_path, 'static/profile picture', picture_fn)
-    form_picture.save(picture_path)
+
+    output_size = (300, 300)
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    i.save(picture_path)
+
     return picture_fn
 
 @app.route('/account', methods=["GET", "POST"])
@@ -88,3 +80,15 @@ def account():
         form.email.data = current_user.email
     image_file = url_for('static', filename='profile picture/' + current_user.image_file)
     return render_template('inventory/account.html', title="account", image_file=image_file, form=form)
+
+@app.route('/post/new', methods=["GET", "POST"])
+@login_required
+def new_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(title=form.title.data, content=form.content.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Post has been created!', 'success')
+        return redirect(url_for('home'))
+    return render_template("inventory/create_post.html", title="new post", form=form)
