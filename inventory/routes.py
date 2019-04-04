@@ -8,18 +8,26 @@ from inventory import app, bcrypt, db
 from flask_login import login_user, current_user, logout_user, login_required
 
 @app.route("/")
+@app.route("/home")
 def home():
     posts = Post.query.all()
     return render_template("inventory/inventory_list.html", posts=posts)
 
+@app.route("/about")
+def about():
+    return render_template("inventory/about.html", title="about")
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    # if not current_user.admin:
+    #     flash('Unauthorized access!', 'danger')
+    #     return redirect(url_for('home'))
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        user = User(username=form.username.data, email=form.email.data, password=hashed_password)
+        user = User(username=form.username.data, email=form.email.data, password=hashed_password, admin=False)
         db.session.add(user)
         db.session.commit()
         flash('Your account has been created! You are now able to log in.', 'success')
@@ -92,3 +100,27 @@ def new_post():
         flash('Post has been created!', 'success')
         return redirect(url_for('home'))
     return render_template("inventory/create_post.html", title="new post", form=form)
+
+@app.route('/post/edit/<int:post_id>', methods=["GET", "POST"])
+@login_required
+def edit_post(post_id):
+    form = PostForm()
+    post = Post.query.get_or_404(post_id)
+    if not current_user.username == post.author.username:
+        flash('Access denied', 'danger')
+        return redirect(url_for('home'))
+    if form.validate_on_submit():
+        post.title = form.title.data
+        post.content = form.content.data
+        db.session.commit()
+        flash('Post has been updated!', 'success')
+        return redirect(url_for('home'))
+    elif request.method == "GET":
+        form.title.data = post.title
+        form.content.data = post.content
+    return render_template("inventory/update_post.html", title=post.title, form=form)
+
+@app.route('/post/<int:post_id>')
+def post(post_id):
+    post = Post.query.get_or_404(post_id)
+    return render_template('inventory/post.html', title=post.title, post=post)

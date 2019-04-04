@@ -6,7 +6,7 @@
         <img class="rounded-circle account-img" src="{{ image_file }}">
         <div class="media-body">
         <h2 class="account-heading">{{ current_user.username|upper }}</h2>
-        <p class="text-secondary">{{ current_user.email }}</p>
+        <p class="text-secondary">{{ current_user.email }} | <small class="text-muted">ADMIN: {{ current_user.admin }}</small></p>
         </div>
     </div>
     <form action="" method="POST" enctype="multipart/form-data">
