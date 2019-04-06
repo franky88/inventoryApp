@@ -1,8 +1,8 @@
 import os
 import secrets
 from PIL import Image
-from flask import render_template, flash, url_for, redirect, request
-from inventory.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm
+from flask import render_template, flash, url_for, redirect, request, abort
+from inventory.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm
 from inventory.models import User, Post
 from inventory import app, bcrypt, db
 from flask_login import login_user, current_user, logout_user, login_required
@@ -10,7 +10,8 @@ from flask_login import login_user, current_user, logout_user, login_required
 @app.route("/")
 @app.route("/home")
 def home():
-    posts = Post.query.all()
+    page = request.args.get('page', 1, type=int)
+    posts = Post.query.order_by(Post.timestamp.desc()).paginate(page=page, per_page=5)
     return render_template("inventory/inventory_list.html", posts=posts)
 
 @app.route("/about")
@@ -19,9 +20,6 @@ def about():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    # if not current_user.admin:
-    #     flash('Unauthorized access!', 'danger')
-    #     return redirect(url_for('home'))
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     form = RegistrationForm()
@@ -99,28 +97,73 @@ def new_post():
         db.session.commit()
         flash('Post has been created!', 'success')
         return redirect(url_for('home'))
-    return render_template("inventory/create_post.html", title="new post", form=form)
+    return render_template("inventory/create_post.html", title="new post", form=form, legend="new post")
 
-@app.route('/post/edit/<int:post_id>', methods=["GET", "POST"])
+@app.route('/post/edit/<int:post_id>/update', methods=['GET', 'POST'])
 @login_required
-def edit_post(post_id):
-    form = PostForm()
+def update_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if not current_user.username == post.author.username:
-        flash('Access denied', 'danger')
-        return redirect(url_for('home'))
+    if post.author != current_user:
+        abort(403)
+    form = PostForm()
     if form.validate_on_submit():
         post.title = form.title.data
         post.content = form.content.data
         db.session.commit()
         flash('Post has been updated!', 'success')
-        return redirect(url_for('home'))
+        return redirect(url_for('post', post_id=post.id))
     elif request.method == "GET":
         form.title.data = post.title
         form.content.data = post.content
-    return render_template("inventory/update_post.html", title=post.title, form=form)
+    return render_template("inventory/update_post.html", title=post.title, form=form, legend="update post")
 
 @app.route('/post/<int:post_id>')
 def post(post_id):
     post = Post.query.get_or_404(post_id)
     return render_template('inventory/post.html', title=post.title, post=post)
+
+@app.route('/post/edit/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.author != current_user:
+        abort(403)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Post has been deleted!', 'success')
+    return redirect(url_for('home'))
+
+@app.route("/user/<string:username>")
+def user_posts(username):
+    page = request.args.get('page', 1, type=int)
+    user = User.query.filter_by(username=username).first_or_404()
+    posts = Post.query.filter_by(author=user)\
+        .order_by(Post.timestamp.desc())\
+        .paginate(page=page, per_page=5)
+    return render_template("inventory/user_posts.html", posts=posts, user=user)
+
+def send_reset_email(user):
+    pass
+
+@app.route('/reset_password', methods=["GET", "POST"])
+def reset_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        send_reset_email(user)
+        flash('An email has been sent with instructions to reset your password.', 'info')
+        return redirect(url_for('login'))
+    return render_template('reset_request.html', title='Reset Password', form=form)
+
+@app.route('/reset_password/<token>', methods=["GET", "POST"])
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    user = User.verify_reset_token(token)
+    if user is None:
+        flash('That is an invalid or expired token', 'warning')
+        return redirect(url_for('reset_request'))
+    form = ResetPasswordForm()
+    return render_template('reset_token.html', title='Reset Password', form=form)
