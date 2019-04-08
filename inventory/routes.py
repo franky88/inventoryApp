@@ -4,8 +4,9 @@ from PIL import Image
 from flask import render_template, flash, url_for, redirect, request, abort
 from inventory.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm
 from inventory.models import User, Post
-from inventory import app, bcrypt, db
+from inventory import app, bcrypt, db, mail
 from flask_login import login_user, current_user, logout_user, login_required
+from flask_mail import Message
 
 @app.route("/")
 @app.route("/home")
@@ -143,7 +144,14 @@ def user_posts(username):
     return render_template("inventory/user_posts.html", posts=posts, user=user)
 
 def send_reset_email(user):
-    pass
+    token = user.get_reset_token()
+    msg = Message('PASSWORD RESET REQUEST', sender='noreply@demo.com', recipients=[user.email])
+    msg.body = f"""To reset your password, visit the following link:
+    {url_for('reset_token', token=token, _external=True)}
+    
+    If you did not make this request then simply ignore this email and no changes will be made!
+    """
+    mail.send(msg)
 
 @app.route('/reset_password', methods=["GET", "POST"])
 def reset_request():
@@ -155,7 +163,7 @@ def reset_request():
         send_reset_email(user)
         flash('An email has been sent with instructions to reset your password.', 'info')
         return redirect(url_for('login'))
-    return render_template('reset_request.html', title='Reset Password', form=form)
+    return render_template('inventory/reset_request.html', title='Reset Password', form=form)
 
 @app.route('/reset_password/<token>', methods=["GET", "POST"])
 def reset_token(token):
@@ -166,4 +174,10 @@ def reset_token(token):
         flash('That is an invalid or expired token', 'warning')
         return redirect(url_for('reset_request'))
     form = ResetPasswordForm()
-    return render_template('reset_token.html', title='Reset Password', form=form)
+    if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        user.password = hashed_password
+        db.session.commit()
+        flash('Your passord has been updated! You are now able to log in.', 'success')
+        return redirect(url_for('login'))
+    return render_template('inventory/reset_token.html', title='Reset Password', form=form)
