@@ -1,7 +1,8 @@
-from inventory import migrate, manager
-from flask_migrate import MigrateCommand
+# from inventory import manager, migrate
+# from flask_migrate import MigrateCommand
 
-manager.add_command('db', MigrateCommand)
+# manager.add_command('db', MigrateCommand)
+# # manager.add_command('db', MigrateCommand)
 
-if __name__=="__main__":
-    manager.run()
+# if __name__=="__main__":
+#     manager.run()
