@@ -10,6 +10,7 @@ def load_user(user_id):
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(50), unique=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
@@ -17,6 +18,7 @@ class User(db.Model, UserMixin):
     admin = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref="author", lazy=True)
     items = db.relationship('Item', backref="checker", lazy=True)
+    active = db.Column(db.Boolean, default=False)
     def get_reset_token(self, expires_sec=1800):
         s = Serializer(current_app.config['SECRET_KEY'], expires_sec)
         return s.dumps({ 'user_id': self.id }).decode('utf-8')
@@ -36,6 +38,7 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 

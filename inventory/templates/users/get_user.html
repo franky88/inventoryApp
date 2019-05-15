@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<article class="media content-section">
+    <img src="{{ url_for('static', filename='profile picture/' + user.image_file) }}" alt="" class="rounded-circle article-img">
+    <div class="media-body">
+        <div class="article-metadata">
+            <a class="mr-2" href="">{{ user.username|upper }}</a> | <small class="text-muted">IS ADMIN?: {{ user.admin }} | IS ACTIVE?: {{ user.active }}</small>
+        </div>
+        <h3><a class="article-title" href="">{{ user.email }}</a></h3>
+        <form action="" method="POST" enctype="multipart/form-data">
+            {% if user.active %}
+            <button type="button" class="btn btn-danger btn-sm m-1" data-toggle="modal" data-target="#deactivateModal">Deactivate</button>
+            {% else %}
+            <button type="button" class="btn btn-primary btn-sm m-1" data-toggle="modal" data-target="#activateModal">Activate</button>
+            {% endif %}
+            {% if not user.admin %}
+            <button type="button" class="btn btn-primary btn-sm m-1" data-toggle="modal" data-target="#promoteModal">Promote</button>
+            {% else %}
+            <button type="button" class="btn btn-danger btn-sm m-1" data-toggle="modal" data-target="#demoteModal">Demote</button>
+            {% endif %}
+        </form>
+    </div>
+</article>
+
+<!-- Modal -->
+<div class="modal fade" id="promoteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Promote user?</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <strong>USERNAME :</strong> {{ user.username|upper }}?
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+            <form action="{{ url_for('users.promote_user', public_id=user.public_id) }}" method="POST">
+                <input type="submit" class="btn btn-primary btn-sm" value='Promote'>
+            </form>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="demoteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Demote user?</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <strong>USERNAME :</strong> {{ user.username|upper }}?
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+            <form action="{{ url_for('users.demote_user', public_id=user.public_id) }}" method="POST">
+                <input type="submit" class="btn btn-danger btn-sm" value='Demote'>
+            </form>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Deactivate user?</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <strong>USERNAME :</strong> {{ user.username|upper }}?
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+            <form action="{{ url_for('users.deactivate_user', public_id=user.public_id) }}" method="POST">
+                <input type="submit" class="btn btn-danger btn-sm" value='Deactivate'>
+            </form>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="activateModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Activate user?</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <strong>USERNAME :</strong> {{ user.username|upper }}?
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+            <form action="{{ url_for('users.activate_user', public_id=user.public_id) }}" method="POST">
+                <input type="submit" class="btn btn-primary btn-sm" value='Activate'>
+            </form>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

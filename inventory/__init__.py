@@ -24,18 +24,20 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     mail.init_app(app)
 
+    migrate = Migrate(app, db)
+    manager = Manager(app)
+    manager.add_command('db', MigrateCommand)
+
     from inventory.users.routes import users
     from inventory.posts.routes import posts
     from inventory.main.routes import main
+    from inventory.api.routes import api
     from inventory.errors.handlers import errors
 
     app.register_blueprint(users)
     app.register_blueprint(posts)
     app.register_blueprint(main)
+    app.register_blueprint(api, url_prefix='/api')
     app.register_blueprint(errors)
 
     return app
-
-# migrate = Migrate(app, db)
-# manager = Manager(app)
-# manager.add_command('db', MigrateCommand)

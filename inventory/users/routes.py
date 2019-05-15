@@ -1,3 +1,4 @@
+import uuid
 from flask import render_template, url_for, flash, redirect, request, Blueprint
 from flask_login import login_user, current_user, logout_user, login_required
 from inventory import db, bcrypt
@@ -10,12 +11,19 @@ users = Blueprint('users', __name__)
 
 @users.route("/register", methods=["GET", "POST"])
 def register():
+    # if not current_user.is_authenticated:
+    #     flash('Access denied!', 'danger')
+    #     return redirect(url_for('main.home'))
+    # if not current_user.admin:
+    #     flash('Access Denied!', 'danger')
+    #     return redirect(url_for('main.home'))
     if current_user.is_authenticated:
+        flash('Already registered!', 'info')
         return redirect(url_for('main.home'))
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        user = User(username=form.username.data, email=form.email.data, password=hashed_password, admin=False)
+        user = User(public_id=str(uuid.uuid4()), username=form.username.data, email=form.email.data, password=hashed_password, admin=False, active=True)
         db.session.add(user)
         db.session.commit()
         flash('Your account has been created! You are now able to log in.', 'success')
@@ -25,10 +33,14 @@ def register():
 @users.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
+        flash('Already login!', 'info')
         return redirect(url_for('main.home'))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
+        if not user.active:
+            flash('Oops! Your account is deactivated! please visit network admin for account activation!', 'info')
+            return redirect(url_for('users.login'))
         if user and bcrypt.check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')
@@ -44,6 +56,79 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("main.home"))
+
+@users.route('/users', methods=['GET'])
+@login_required
+def all_users():
+    if not current_user.admin:
+        flash('Access Denied!', 'danger')
+        return redirect(url_for('main.home'))
+    users = User.query.all()
+    return render_template('users/user_list.html', title="users", users=users)
+
+@users.route('/users/<public_id>', methods=['GET'])
+@login_required
+def get_user(public_id):
+    if not current_user.admin:
+        flash('Access Denied!', 'danger')
+        return redirect(url_for('main.home'))
+    user = User.query.filter_by(public_id=public_id).first()
+    return render_template('users/get_user.html', title="user", user=user)
+
+@users.route('/users/<public_id>/delete', methods=['POST'])
+@login_required
+def delete_user(public_id):
+    user = User.query.get_or_404(public_id)
+    if not current_user.admin:
+        abort(403)
+    db.session.delete(user)
+    db.session.commit()
+    flash('User has been deleted!', 'success')
+    return redirect(url_for('main.home'))
+
+@users.route('/users/<public_id>/deactivate', methods=['POST'])
+@login_required
+def deactivate_user(public_id):
+    user = User.query.filter_by(public_id=public_id).first()
+    if not current_user.admin:
+        abort(403)
+    user.active = False
+    db.session.commit()
+    flash('User has been deactivated!', 'success')
+    return redirect(url_for('users.get_user', public_id=user.public_id))
+
+@users.route('/users/<public_id>/activate', methods=['POST'])
+@login_required
+def activate_user(public_id):
+    user = User.query.filter_by(public_id=public_id).first()
+    if not current_user.admin:
+        abort(403)
+    user.active = True
+    db.session.commit()
+    flash('User has been activated!', 'success')
+    return redirect(url_for('users.get_user', public_id=user.public_id))
+
+@users.route('/users/<public_id>/promote', methods=['POST'])
+@login_required
+def promote_user(public_id):
+    user = User.query.filter_by(public_id=public_id).first()
+    if not current_user.admin:
+        abort(403)
+    user.admin = True
+    db.session.commit()
+    flash('User has been promoted!', 'success')
+    return redirect(url_for('users.get_user', public_id=user.public_id))
+
+@users.route('/users/<public_id>/demoted', methods=['POST'])
+@login_required
+def demote_user(public_id):
+    user = User.query.filter_by(public_id=public_id).first()
+    if not current_user.admin:
+        abort(403)
+    user.admin = False
+    db.session.commit()
+    flash('User has been demoted!', 'success')
+    return redirect(url_for('users.get_user', public_id=user.public_id))
 
 @users.route('/account', methods=["GET", "POST"])
 @login_required

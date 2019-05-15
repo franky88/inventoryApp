@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block content %}
+{% for user in users%}
+<article class="media content-section">
+    <img src="{{ url_for('static', filename='profile picture/' + user.image_file) }}" alt="" class="rounded-circle article-img">
+    <div class="media-body">
+        <div class="article-metadata">
+            <a class="mr-2" href="{{ url_for('users.get_user', public_id=user.public_id) }}">{{ user.username|upper }}</a> | <small class="text-muted">IS ADMIN?: {{ user.admin }}</small>
+        </div>
+        <h3><a class="article-title" href="{{ url_for('users.get_user', public_id=user.public_id) }}">{{ user.email }}</a></h3>
+    </div>
+</article>
+{% endfor %}
+{% endblock %}

@@ -1,8 +1,8 @@
-"""empty message
+"""first migration
 
-Revision ID: d4dac4c706e0
+Revision ID: 86624f260804
 Revises: 
-Create Date: 2019-04-04 16:56:27.594449
+Create Date: 2019-05-03 14:42:29.836783
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd4dac4c706e0'
+revision = '86624f260804'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,13 +28,16 @@ def upgrade():
     )
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('public_id', sa.String(length=50), nullable=True),
     sa.Column('username', sa.String(length=20), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
     sa.Column('image_file', sa.String(length=20), nullable=False),
     sa.Column('password', sa.String(length=60), nullable=False),
     sa.Column('admin', sa.Boolean(), nullable=True),
+    sa.Column('active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('public_id'),
     sa.UniqueConstraint('username')
     )
     op.create_table('item',
@@ -55,6 +58,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=100), nullable=False),
     sa.Column('content', sa.Text(), nullable=False),
+    sa.Column('image_file', sa.String(length=20), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
